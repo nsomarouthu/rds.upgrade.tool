@@ -43,6 +43,7 @@ This repository contains **four Python scripts** designed to help you **discover
 **Usage**  
 ```bash
 python get_older_rds.py [MAX_ENGINE_VERSION]
+```
 
 ### 2. rds_parameter_group_tool.py
 
@@ -61,6 +62,7 @@ python get_older_rds.py [MAX_ENGINE_VERSION]
 **Usage**  
 ```bash
 python rds_parameter_group_tool.py --identifier <DB_IDENTIFIER> [--target_version <ENGINE_VERSION>]
+```
 
 ### 3. check_pg_slots_and_extensions.py
 
@@ -78,6 +80,7 @@ python rds_parameter_group_tool.py --identifier <DB_IDENTIFIER> [--target_versio
 **Usage**  
 ```bash
 python check_pg_slots_and_extensions.py --instance <RDS_INSTANCE_NAME> [--region <AWS_REGION>]
+```
 
 ### 4. rds_upgrade_tool.py
 
@@ -100,3 +103,4 @@ python check_pg_slots_and_extensions.py --instance <RDS_INSTANCE_NAME> [--region
 **Usage**  
 ```bash
 python rds_upgrade_tool.py -i <DB_IDENTIFIER> -t <TARGET_VERSION>
+```
