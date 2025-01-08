@@ -118,6 +118,7 @@ Ensure you have **Python 3.8** or higher installed on your system.
 Run the following command to check the installed Python version:
 ```bash
 python --version
+```
 
 ## 2.2 AWS Credentials
 
