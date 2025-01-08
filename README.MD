@@ -104,3 +104,44 @@ python check_pg_slots_and_extensions.py --instance <RDS_INSTANCE_NAME> [--region
 ```bash
 python rds_upgrade_tool.py -i <DB_IDENTIFIER> -t <TARGET_VERSION>
 ```
+# Setup and Prerequisites
+
+This document provides detailed steps to set up your environment and install the required dependencies to use the tools in this repository.
+
+---
+
+## 2.1 Python Version
+
+Ensure you have **Python 3.8** or higher installed on your system.
+
+### Verify Python Version
+Run the following command to check the installed Python version:
+```bash
+python --version
+
+## 2.2 AWS Credentials
+
+The tools in this repository interact with AWS services using the AWS SDK (`boto3`). Ensure your AWS credentials are correctly configured.
+
+### Option 1: Use Environment Variables
+You can configure your credentials by exporting them as environment variables:
+```bash
+export AWS_REGION=<your-region>
+export AWS_ACCESS_KEY_ID=<your-access-key-id>
+export AWS_SECRET_ACCESS_KEY=<your-secret-access-key>
+export AWS_SESSION_TOKEN=<your-session-token>  # Optional, if using temporary credentials
+```
+
+### 2.3 Required Python Libraries
+
+This project depends on the following Python libraries:
+
+- **boto3**: AWS SDK for Python to interact with AWS services.
+- **botocore**: Low-level data-driven core for boto3.
+- **psycopg2**: PostgreSQL adapter for Python to manage database connections.
+- **packaging**: Utility for parsing and comparing software versions.
+
+#### Install Libraries
+Install the required libraries using the provided `requirements.txt` file:
+```bash
+pip install -r requirements.txt
