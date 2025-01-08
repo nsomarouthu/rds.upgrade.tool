@@ -1,0 +1,11 @@
+# Ignore the scratchpad directory
+scratchpad/
+
+# Ignore the rep.yaml file
+rep.yaml
+
+.DS_Store
+__pycache__/
+*.pyc
+
+
