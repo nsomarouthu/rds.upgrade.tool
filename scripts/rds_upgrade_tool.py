@@ -8,7 +8,9 @@ from packaging import version
 from datetime import datetime
 import argparse
 import time
-import scripts.check_pg_slots_and_extensions as check_pg_slots_and_extensions
+import check_pg_slots_and_extensions as check_pg_slots_and_extensions
+import replication_parameters_check as replication_parameters_check
+import major_pg_upgrade_tool as major_pg_upgrade_tool
 
 # Set up logging
 logging.basicConfig(
@@ -156,7 +158,7 @@ def check_blue_green_deployment_status(rds_client, deployment_id, bg_identifier)
         logger.error(f"Error occurred while checking status for '{deployment_id}': {e}")
         return None
 
-def initiate_blue_green_upgrade(rds_client, identifier, db_engine_version, instance_type):
+def initiate_blue_green_upgrade(rds_client, identifier, db_engine_version, instance_type, current_major, target_major):
     try:
         logger.info("No active Blue/Green deployment for the instance. Proceeding with upgrade.")
         
@@ -218,12 +220,31 @@ def initiate_blue_green_upgrade(rds_client, identifier, db_engine_version, insta
         max_length = 60 - len("bg-deployment-")
         blue_green_deployment_name = f"bg-deployment-{identifier[:max_length]}"
 
-        # Create a Blue/Green deployment
-        response = rds_client.create_blue_green_deployment(
-            BlueGreenDeploymentName=blue_green_deployment_name,  # Deployment name
-            Source=db_instance_arn,  # Primary DB instance ARN (Blue)
-            TargetEngineVersion=db_engine_version,  # Target DB engine version
-        )
+                # Create a Blue/Green deployment
+        is_target_major_above = target_major > current_major
+
+        # Initialize the base parameters for the deployment
+        deployment_params = {
+            'BlueGreenDeploymentName': blue_green_deployment_name,  # Deployment name
+            'Source': db_instance_arn,                             # Primary DB instance ARN (Blue)
+            'TargetEngineVersion': db_engine_version,              # Target DB engine version
+        }
+
+        # Add additional parameters based on instance type and version condition
+        if is_target_major_above:
+            if instance_type == 'Aurora':
+                deployment_params.update({
+                    'TargetDBClusterParameterGroupName': f"{identifier}-cluster-pgaurora-postgresql{target_major}",
+                    'TargetDBParameterGroupName': f"{identifier}-instance-pgaurora-postgresql{target_major}"
+                })
+            elif instance_type == 'RDS':
+                deployment_params['TargetDBParameterGroupName'] = f"{identifier}-instance-pgpostgres{target_major}"
+
+        # Create the blue-green deployment with the assembled parameters
+        response = rds_client.create_blue_green_deployment(**deployment_params)
+
+        # Optionally, handle the response
+        print("Blue-Green Deployment initiated:", response)
         logger.info(f"Blue/Green deployment created successfully: {response['BlueGreenDeployment']['BlueGreenDeploymentIdentifier']}")
         
         # store this db bg unique identifier to a variable
@@ -460,19 +481,29 @@ def main():
         
     bg_identifier = get_blue_green_deployment_identifier(rds_client, identifier)
     
+    current_major = int(current_version.split('.')[0])
+    target_major = int(target_version.split('.')[0])
+
     switchover_status = None
     
     if upgrade_needed is False and switchover_status is None:
         print("No upgrade needed. Exiting.")
         sys.exit(0)
-
+    
     if bg_identifier:
         switchover_status = check_blue_green_deployment_status(rds_client, identifier, bg_identifier)
     else:
         # replication_enabled = check_logical_replication(rds_client, db_instance, instance_type)
         if upgrade_needed and switchover_status is None and not check_pg_slots_and_extensions.fetch_and_check(identifier):
-            create_snapshot(rds_client, identifier, instance_type)
-            initiate_blue_green_upgrade(rds_client, identifier, target_version, instance_type)
+            if not replication_parameters_check.check_and_update_parameters(rds_client, db_instance, instance_type):
+                if target_major > current_major:
+                    print("Major upgrade detected. Proceeding with parameter group migration.")
+                    major_pg_upgrade_tool.handle_parameter_groups_upgrade(identifier, rds_client, current_version, target_version, instance_type) 
+                create_snapshot(rds_client, identifier, instance_type)
+                initiate_blue_green_upgrade(rds_client, identifier, target_version, instance_type, current_major, target_major)
+            else:
+                print("parameter changes require manual reboot of the RDS instance. Exiting.")
+                sys.exit(1)
     
     if switchover_status == 'AVAILABLE':
         switchover_status = switchover_blue_green_deployment(rds_client, bg_identifier)

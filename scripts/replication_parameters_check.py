@@ -1,6 +1,4 @@
-import sys
-from rds_upgrade_tool import logger, initialize_aws_clients, validate_rds_or_aurora, parse_arguments
-from botocore.exceptions import ClientError
+from rds_upgrade_tool import *
 
 PARAMETER_DOC_LINKS = {
     'max_replication_slots': 'https://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/Appendix.PostgreSQL.CommonDBATasks.html#Appendix.PostgreSQL.CommonDBATasks.ReplicationSlots',
@@ -66,40 +64,6 @@ def modify_parameters(rds_client, param_group_name, instance_type, parameters):
     logger.info("Parameters modified. Changes pending reboot.")
 
 
-def print_user_defined_parameters(rds_client, parameter_group_name, instance_type):
-    """Print all parameters with Source: user, handling pagination."""
-    try:
-        paginator_method = (
-            rds_client.get_paginator('describe_db_cluster_parameters')
-            if instance_type.lower() == 'aurora'
-            else rds_client.get_paginator('describe_db_parameters')
-        )
-        
-        paginator_key = (
-            "DBClusterParameterGroupName"
-            if instance_type.lower() == 'aurora'
-            else "DBParameterGroupName"
-        )
-        
-        user_params = []
-        paginator = paginator_method.paginate(**{paginator_key: parameter_group_name})
-        for page in paginator:
-            for param in page['Parameters']:
-                if param.get('Source') == 'user':  # Check if 'Source' is 'user'
-                    user_params.append(param)
-
-        if user_params:
-            print(f"\nParameters with Source: user in {parameter_group_name}:")
-            for param in user_params:
-                print(f"{param['ParameterName']}: {param['ParameterValue']}")
-        else:
-            print(f"\nNo parameters with Source: user found in {parameter_group_name}")
-    except rds_client.exceptions.DBParameterGroupNotFoundFault:
-        sys.exit(f"Error: The parameter group '{parameter_group_name}' does not exist.")
-    except Exception as e:
-        sys.exit(f"Error retrieving parameters: {e}")
-
-
 def check_and_update_parameters(rds_client, db_instance, instance_type):
     """
     Check and allow the user to modify specific parameters if necessary.
@@ -124,8 +88,6 @@ def check_and_update_parameters(rds_client, db_instance, instance_type):
         parameters = fetch_parameters(describe_function, param_group_name, instance_type)
         modifiable_parameters = display_parameters(parameters)
 
-        # --- NEW: Print user-defined parameters (optional step) ---
-        print_user_defined_parameters(rds_client, param_group_name, instance_type)
 
         # Ask the user if they want to modify any parameter
         changes = []
@@ -148,10 +110,10 @@ def check_and_update_parameters(rds_client, db_instance, instance_type):
         if changes:
             modify_parameters(rds_client, param_group_name, instance_type, changes)
             logger.info("Changes have been applied. Please reboot the instance to take effect.")
+            return True
         else:
             logger.info("No changes made.")
-
-        return True
+            return False
 
     except ClientError as e:
         logger.error(f"Client error occurred: {e}")
@@ -170,6 +132,5 @@ if __name__ == "__main__":
     
     db_instance, instance_type = validate_rds_or_aurora(rds_client, identifier)
     current_version = db_instance.get('EngineVersion', None)
-
     # Run the check and update function
     check_and_update_parameters(rds_client, db_instance, instance_type)

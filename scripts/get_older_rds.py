@@ -1,6 +1,4 @@
-import boto3
-import sys
-from rds_upgrade_tool import initialize_aws_clients
+from rds_upgrade_tool import *
 
 
 def parse_engine_version(version):
