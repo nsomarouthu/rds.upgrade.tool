@@ -1,10 +1,9 @@
-import boto3
-
+from rds_upgrade_tool import *
 # Assign parsed arguments to variables
-source_instance = "nstar-dnsconf-20230417-prd-1-prod"
-target_writer_instance = "rds-aurora-postgres-rds-aurora-pg-nstar-dns-c-rds2-fc0cqxs0jy4e"  # Target writer instance
-target_reader_instance = "rds-aurora-postgres-rds-aurora-pg-nstar-dns-c-rds1-uc19cl13cnhe"  # Target reader instance
-target_alarm_name_identifier = "nstar-dns-conf-20240904-prd-1-prod-a    a"  # Aurora reader instance
+source_instance = "nstar-dnsdata-20230417-prd-1-prod"
+target_writer_instance = "nstar-dns-data-20240904-prd-1-prod-01"  # Target writer instance
+target_reader_instance = "nstar-dns-data-20240904-prd-1-prod-02"  # Target reader instance
+target_alarm_name_identifier = "nstar-dns-data-20240904-prd-1-prod"  # Aurora reader instance
 
 # Initialize CloudWatch client
 cloudwatch = boto3.client('cloudwatch', region_name='us-east-1')
@@ -97,3 +96,30 @@ for alarm in all_alarms:
             print(f"Created alarm {new_alarm_name_reader} for {target_reader_instance}")
         except Exception as e:
             print(f"Failed to create alarm {new_alarm_name_reader} for {target_reader_instance}: {str(e)}")
+
+# Example usage
+if __name__ == "__main__":
+
+    args = parse_arguments()
+    identifier = args.identifier
+    target_identifier = args.target_version
+    rds_client = initialize_aws_clients()
+    
+    db_instance, instance_type = validate_rds_or_aurora(rds_client, identifier)
+    
+    
+    if instance_type == 'RDS':
+        # Logic for RDS instances
+        # Get all instances
+        instances = rds_client.describe_db_instances()['DBInstances']
+
+    elif instance_type == 'Aurora':
+        # Logic for Aurora clusters
+        # Get cluster details
+        cluster_response = rds_client.describe_db_clusters(DBClusterIdentifier=identifier)
+        cluster = cluster_response['DBClusters'][0]
+        
+        # Get instances in the cluster
+        instances = rds_client.describe_db_instances(
+            Filters=[{'Name': 'db-cluster-id', 'Values': [identifier]}]
+        )['DBInstances']    
