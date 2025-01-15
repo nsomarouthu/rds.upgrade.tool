@@ -11,6 +11,7 @@ This repository contains **four Python scripts** designed to help you **discover
    1.2 [2. rds_parameter_group_tool.py](#2-rds_parameter_group_toolpy)  
    1.3 [3. check_pg_slots_and_extensions.py](#3-check_pg_slots_and_extensionspy)  
    1.4 [4. rds_upgrade_tool.py](#4-rds_upgrade_toolpy)  
+   1.5 [5. alarms.py](#5-alarms.py)  
 
 2. [Setup and Prerequisites](#setup-and-prerequisites)  
    2.1 [Python Version](#python-version)  
@@ -104,6 +105,23 @@ python check_pg_slots_and_extensions.py --instance <RDS_INSTANCE_NAME> [--region
 ```bash
 python rds_upgrade_tool.py -i <DB_IDENTIFIER> -t <TARGET_VERSION>
 ```
+### 5. alarms.py
+
+**Purpose**  
+- Fetching existing CloudWatch alarms for a source instance.
+- Modifying the alarms to reference a target instance.
+- Creating new alarms for the target instance.
+
+**Key Functions**  
+- **`fetch_alarms(cloudwatch, instance_id)`**: Retrieves a list of alarms associated with the specified instance from CloudWatch.
+- **`compare_alarms(source_alarms, target_alarms)`**: Compares alarms between the source and target instances.
+- **`create_alarms(cloudwatch, alarms, target_instance)`**: Creates or updates alarms on the target instance based on the source instance's alarms.
+
+**Usage**  
+```bash
+python alarms.py -i <SOURCE_INSTANCE> -t <TARGET_INSTANCE>
+```
+
 # Setup and Prerequisites
 
 This document provides detailed steps to set up your environment and install the required dependencies to use the tools in this repository.
