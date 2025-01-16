@@ -187,5 +187,6 @@ if __name__ == "__main__":
         target_instance = print_db_instance_details(rds_client, target_instance_type, target_instance)
         
     all_alarms = fetch_all_cloudwatch_alarms(cloudwatch)
-    create_alarms(all_alarms, source_instance, target_instance, cloudwatch)
-    
+    for instance in target_instance:
+            create_alarms(all_alarms, source_instance, instance, cloudwatch)
+            print(f"Alarms created for {instance}")
